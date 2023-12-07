@@ -11,10 +11,18 @@ jobs:
         configuration: [Debug, Release]
 
     name: Z64Utils-${{ matrix.target-runtime }}-${{ matrix.configuration }}
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: test env
+        shell: bash
+        run: |
+          echo optout=$DOTNET_CLI_TELEMETRY_OPTOUT
+          bash -c 'echo optout=$DOTNET_CLI_TELEMETRY_OPTOUT'
 
       - name: dotnet restore
         shell: bash
