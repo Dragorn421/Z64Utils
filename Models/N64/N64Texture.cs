@@ -11,6 +11,7 @@ using System.CommandLine.IO;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia;
+using System.Diagnostics;
 
 namespace N64
 {
@@ -174,8 +175,8 @@ namespace N64
                 case G_IM_FMT.G_IM_FMT_CI:
                     switch (siz)
                     {
-                        case G_IM_SIZ.G_IM_SIZ_4b: return DecodeCI4(texels, buff, tlut);
-                        case G_IM_SIZ.G_IM_SIZ_8b: return DecodeCI8(texels, buff, tlut);
+                        case G_IM_SIZ.G_IM_SIZ_4b: Debug.Assert(tlut != null); return DecodeCI4(texels, buff, tlut);
+                        case G_IM_SIZ.G_IM_SIZ_8b: Debug.Assert(tlut != null); return DecodeCI8(texels, buff, tlut);
                         default: throw new N64TextureException($"Invalid Texture Format: fmt={fmt}; size={siz}");
                     }
                 case G_IM_FMT.G_IM_FMT_IA:

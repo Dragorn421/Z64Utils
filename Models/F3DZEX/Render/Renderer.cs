@@ -505,8 +505,6 @@ namespace F3DZEX.Render
 
 
 
-        static int TexDecodeCount = 0;
-
         private void DecodeTex(TextureHandler tex, Tile tile, byte[]? tlut)
         {
             int w = tile.WrapWidth;
@@ -530,8 +528,6 @@ namespace F3DZEX.Render
         {
             if (_reqDecodeTex)
             {
-                //Debug.WriteLine($"Decoding texture... {TexDecodeCount++}");
-
                 var tile0 = _combiner.UsesTex0() ? _tiles[_selectedTile + 0] : null;
                 var tile1 = _combiner.UsesTex1() ? _tiles[_selectedTile + 1] : null;
 

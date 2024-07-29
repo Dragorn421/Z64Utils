@@ -11,6 +11,7 @@ using F3DZEX;
 using Syroot.BinaryData;
 using Common;
 using RDP;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Z64
 {
@@ -281,6 +282,7 @@ namespace Z64
                 }
             }
 
+            [MemberNotNull("JointX", "JointY", "JointZ", "Child", "Sibling")]
             public override void SetData(byte[] data)
             {
                 using (MemoryStream ms = new MemoryStream(data))
@@ -331,6 +333,7 @@ namespace Z64
                 }
             }
 
+            [MemberNotNull("LimbSegments")]
             public override void SetData(byte[] data)
             {
                 if ((data.Length % 4) != 0)
@@ -372,6 +375,7 @@ namespace Z64
                 }
             }
 
+            [MemberNotNull("LimbsSeg", "LimbCount")]
             public override void SetData(byte[] data)
             {
                 using (var ms = new MemoryStream(data))
@@ -458,6 +462,7 @@ namespace Z64
                 }
             }
 
+            [MemberNotNull("FrameData", "JointIndices")]
             public override void SetData(byte[] data)
             {
                 using (var ms = new MemoryStream(data))
@@ -494,6 +499,7 @@ namespace Z64
                 }
             }
 
+            [MemberNotNull("FrameData")]
             public override void SetData(byte[] data)
             {
                 if ((data.Length % 2) != 0)
@@ -545,6 +551,7 @@ namespace Z64
                 }
             }
 
+            [MemberNotNull("JointIndices")]
             public override void SetData(byte[] data)
             {
                 if ((data.Length % ENTRY_SIZE) != 0)
@@ -595,6 +602,7 @@ namespace Z64
                 }
             }
 
+            [MemberNotNull("PlayerAnimationSegment")]
             public override void SetData(byte[] data)
             {
                 using (var ms = new MemoryStream(data))
@@ -649,6 +657,7 @@ namespace Z64
                 }
             }
 
+            [MemberNotNull("JointTable")]
             public override void SetData(byte[] data)
             {
                 // TODO: Validate size
@@ -791,6 +800,7 @@ namespace Z64
                 }
             }
 
+            [MemberNotNull("Points")]
             public override void SetData(byte[] data)
             {
                 if ((data.Length % ENTRY_SIZE) != 0)
@@ -854,6 +864,7 @@ namespace Z64
                 }
             }
 
+            [MemberNotNull("CollisionPolys")]
             public override void SetData(byte[] data)
             {
                 if ((data.Length % ENTRY_SIZE) != 0)
@@ -909,6 +920,7 @@ namespace Z64
                 }
             }
 
+            [MemberNotNull("SurfaceTypes")]
             public override void SetData(byte[] data)
             {
                 if ((data.Length % ENTRY_SIZE) != 0)
@@ -961,6 +973,7 @@ namespace Z64
                 }
             }
 
+            [MemberNotNull("CamData")]
             public override void SetData(byte[] data)
             {
                 if ((data.Length % ENTRY_SIZE) != 0)

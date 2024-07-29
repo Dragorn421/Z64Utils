@@ -9,6 +9,7 @@ using N64;
 using System.Collections;
 using System.Diagnostics;
 using Common;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Z64
 {
@@ -34,35 +35,23 @@ namespace Z64
         public byte[]? Data { get; set; }
         public bool Deleted { get; set; }
 
-        public Z64File()
-        {
-
-        }
-        public Z64File(byte[] data, int vrom, int romStart, int romEnd, bool comp)
+        public Z64File(byte[]? data, int vrom, int romStart, int romEnd, bool comp, bool deleted = false)
         {
             Data = data;
             VRomStart = vrom;
-            VRomEnd = Data != null ? vrom + data.Length : vrom;
+            VRomEnd =  vrom + (data?.Length ?? 0);
             RomStart = romStart;
             RomEnd = romEnd;
             Compressed = comp;
-            Deleted = false;
+            Deleted = deleted;
 
         }
         public static Z64File DeletedFile(int vrom, int rom, int size)
         {
-            return new Z64File()
-            {
-                Data = new byte[size],
-                VRomStart = vrom,
-                VRomEnd = vrom + size,
-                RomStart = rom,
-                RomEnd = rom,
-                Compressed = false,
-                Deleted = true,
-            };
+            return new Z64File(new byte[size], vrom, rom, rom, false, true);
         }
 
+        [MemberNotNullWhen(true, "Data")]
         public bool Valid()
         {
             return Data != null;
@@ -261,6 +250,8 @@ namespace Z64
         private void FixDmaDataTable()
         {
             var dmatable = GetFile(GetVrom("dmadata"));
+            Debug.Assert(dmatable != null);
+            Debug.Assert(dmatable.Valid());
 
             byte[] newTable;
             using (MemoryStream ms = new MemoryStream())
@@ -305,7 +296,8 @@ namespace Z64
             N64CheckSum.Update(Rom, Version.Cic);
         }
 
-        private void GetFs(BinaryStream br, Action<float, string> progressCalback = null)
+        [MemberNotNull("_files")]
+        private void GetFs(BinaryStream br, Action<float, string>? progressCalback = null)
         {
             _files = new List<Z64File>();
             int filecount = 3; //dmadata file
@@ -337,6 +329,7 @@ namespace Z64
                 {
                     if (i == 2) //dmadata
                     {
+                        Debug.Assert(file.Data != null);
                         filecount = file.Data.Length / 0x10;
 
                         lastprogressI = -filecount; // force a progress update
