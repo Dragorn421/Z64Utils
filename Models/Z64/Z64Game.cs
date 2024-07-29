@@ -31,7 +31,7 @@ namespace Z64
         public int VRomEnd { get; set; }
         public int RomStart { get; set; }
         public int RomEnd { get; set; }
-        public byte[] Data { get; set; }
+        public byte[]? Data { get; set; }
         public bool Deleted { get; set; }
 
         public Z64File()
@@ -135,7 +135,7 @@ namespace Z64
 
         private List<Z64File> _files;
 
-        public Z64Game(N64Rom rom, Action<float, string> progressCalback = null)
+        public Z64Game(N64Rom rom, Action<float, string>? progressCalback = null)
         {
             Rom = rom;
 
@@ -159,7 +159,7 @@ namespace Z64
             Memory = new Z64Memory(this);
 
         }
-        public Z64Game(string path, Action<float, string> progressCalback = null) : this(new N64Rom(path), progressCalback)
+        public Z64Game(string path, Action<float, string>? progressCalback = null) : this(new N64Rom(path), progressCalback)
         {
 
         }
@@ -183,7 +183,7 @@ namespace Z64
 
         public Z64FileType GetFileType(int vrom) => Version.GetFileType(vrom);
 
-        public Z64File GetFileByName(string fileName)
+        public Z64File? GetFileByName(string fileName)
         {
             return _files.Find((f) => GetFileName(f.VRomStart) == fileName);
         }
@@ -196,7 +196,7 @@ namespace Z64
         }
         public int GetVrom(string name) => Version.GetVrom(name) ?? throw new Exception();
 
-        public Z64File GetFile(int vrom) => _files.Find((f) => f.VRomStart == vrom);
+        public Z64File? GetFile(int vrom) => _files.Find((f) => f.VRomStart == vrom);
 
         public Z64File GetFileFromIndex(int index) => _files[index];
 
@@ -213,7 +213,7 @@ namespace Z64
                 : file.RomStart + file.Data.Length;
 
             //find rom end
-            Z64File last = null;
+            Z64File? last = null;
             for (int i = 0; i < GetFileCount(); i++)
             {
                 var iter = GetFileFromIndex(i);

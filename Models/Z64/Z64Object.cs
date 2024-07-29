@@ -156,7 +156,7 @@ namespace Z64
             public int Width { get; set; }
             public int Height { get; set; }
             public N64TexFormat Format { get; set; }
-            public TextureHolder Tlut { get; set; }
+            public TextureHolder? Tlut { get; set; }
 
 
             public TextureHolder(string name, int w, int h, N64TexFormat format, byte[] tex) : base(name)
@@ -241,12 +241,12 @@ namespace Z64
             public byte Sibling { get; set; }
 
             // Standard and LOD Limb Only
-            public SegmentedAddress DListSeg { get; set; }
+            public SegmentedAddress? DListSeg { get; set; }
             // LOD Limb Only
-            public SegmentedAddress DListFarSeg { get; set; }
+            public SegmentedAddress? DListFarSeg { get; set; }
             // Skin Limb Only
             public int SegmentType { get; set; } // indicates the type of data pointed to by SkinSeg
-            public SegmentedAddress SkinSeg { get; set; }
+            public SegmentedAddress? SkinSeg { get; set; }
 
             public SkeletonLimbHolder(string name, byte[] data, EntryType type) : base(name)
             {

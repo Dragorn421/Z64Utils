@@ -149,17 +149,17 @@ namespace N64
             return GetTexSize(texels, a.Item2);
         }
 
-        public static ImageRGBA32 DecodeBitmap(int w, int h, N64TexFormat format, byte[] buff, byte[] tlut = null)
+        public static ImageRGBA32 DecodeBitmap(int w, int h, N64TexFormat format, byte[] buff, byte[]? tlut = null)
         {
             var a = ConvertFormat(format);
             return DecodeBitmap(w, h, a.Item1, a.Item2, buff, tlut);
         }
-        public static ImageRGBA32 DecodeBitmap(int w, int h, G_IM_FMT fmt, G_IM_SIZ siz, byte[] buff, byte[] tlut = null)
+        public static ImageRGBA32 DecodeBitmap(int w, int h, G_IM_FMT fmt, G_IM_SIZ siz, byte[] buff, byte[]? tlut = null)
         {
             byte[] rgba = Decode(w * h, fmt, siz, buff, tlut);
             return new ImageRGBA32(w, h, rgba);
         }
-        public static byte[] Decode(int texels, G_IM_FMT fmt, G_IM_SIZ siz, byte[] buff, byte[] tlut)
+        public static byte[] Decode(int texels, G_IM_FMT fmt, G_IM_SIZ siz, byte[] buff, byte[]? tlut)
         {
             switch (fmt)
             {

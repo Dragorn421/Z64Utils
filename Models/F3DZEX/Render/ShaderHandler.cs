@@ -33,7 +33,7 @@ namespace F3DZEX.Render
 
             Action<TempResUsage<T>> _dispose;
 
-            public TempResUsage(Action<TempResUsage<T>> create = null, Action<TempResUsage<T>> dispose = null)
+            public TempResUsage(Action<TempResUsage<T>>? create = null, Action<TempResUsage<T>>? dispose = null)
             {
                 create?.Invoke(this);
                 _dispose = dispose;
@@ -45,7 +45,7 @@ namespace F3DZEX.Render
             }
         }
 
-        public ShaderHandler(string vertSrc, string fragSrc, string geomSrc = null)
+        public ShaderHandler(string vertSrc, string fragSrc, string? geomSrc = null)
         {
             _compiled = false;
             _uniformLocations = new Dictionary<string, int>();

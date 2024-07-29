@@ -66,7 +66,7 @@ namespace Z64
                             return true;
                     return false;
                 }
-                public static OpCodePattern Parse(string exp)
+                public static OpCodePattern? Parse(string exp)
                 {
                     var ret = new OpCodePattern();
 

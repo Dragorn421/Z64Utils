@@ -29,7 +29,7 @@ namespace F3DZEX
             public static Segment Empty() => new Segment() { Type = SegmentType.Empty, Data = null, Address = 0, Label = "[Empty]" };
             public static Segment FromVram(string label, uint addr) => new Segment() { Type = SegmentType.Vram, Data = null, Address = addr, Label = label, };
             public static Segment FromBytes(string label, byte[] data) => new Segment() { Type = SegmentType.Buffer, Data = data, Address = 0, Label = label, };
-            public static Segment FromFill(string label, byte[] pattern = null) => new Segment() { Type = SegmentType.Fill, Data = pattern ?? new byte[1], Address = 0, Label = label, };
+            public static Segment FromFill(string label, byte[]? pattern = null) => new Segment() { Type = SegmentType.Fill, Data = pattern ?? new byte[1], Address = 0, Label = label, };
         }
 
 

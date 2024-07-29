@@ -15,7 +15,7 @@ namespace F3DZEX.Render
                 => newTop = top;
         }
 
-        public event EventHandler<TopMatrixChangedEventArgs> OnTopMatrixChanged;
+        public event EventHandler<TopMatrixChangedEventArgs>? OnTopMatrixChanged;
 
         private Stack<Matrix4> _stack;
 

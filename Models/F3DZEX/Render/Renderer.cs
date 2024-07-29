@@ -23,7 +23,7 @@ namespace F3DZEX.Render
     {
         public class Config
         {
-            public event EventHandler OnGridScaleChanged;
+            public event EventHandler? OnGridScaleChanged;
 
             private float _gridScale = 5000;
 
@@ -247,7 +247,7 @@ namespace F3DZEX.Render
         }
 
         public uint RenderErrorAddr { get; private set; } = 0xFFFFFFFF;
-        public string ErrorMsg { get; private set; } = null;
+        public string? ErrorMsg { get; private set; } = null;
         [ObservableProperty]
         private bool _hasError = false;
         public Config CurrentConfig { get; set; }
@@ -507,7 +507,7 @@ namespace F3DZEX.Render
 
         static int TexDecodeCount = 0;
 
-        private void DecodeTex(TextureHandler tex, Tile tile, byte[] tlut)
+        private void DecodeTex(TextureHandler tex, Tile tile, byte[]? tlut)
         {
             int w = tile.WrapWidth;
             int h = tile.WrapHeight;
@@ -536,7 +536,7 @@ namespace F3DZEX.Render
                 var tile1 = _combiner.UsesTex1() ? _tiles[_selectedTile + 1] : null;
 
 
-                byte[] tlut = null;
+                byte[]? tlut = null;
                 if ((tile0 != null && tile0.fmt == G_IM_FMT.G_IM_FMT_CI) || (tile1 != null && tile1.fmt == G_IM_FMT.G_IM_FMT_CI))
                 {
                     tlut = new byte[_tlutSize];

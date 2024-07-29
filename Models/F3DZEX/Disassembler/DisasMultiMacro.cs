@@ -14,11 +14,11 @@ namespace F3DZEX
             new LoadTextureBlockMacro()
         };
 
-        private string FindMultiCmdMacro(int index, out int cmdCount)
+        private string? FindMultiCmdMacro(int index, out int cmdCount)
         {
             foreach (var entry in MultiMacros)
             {
-                if (entry.IsCandidate(this, index) && entry.Disassemble(this, index, out string res))
+                if (entry.IsCandidate(this, index) && entry.Disassemble(this, index, out string? res))
                 {
                     cmdCount = entry.GetCommandCount();
                     return res;
@@ -51,7 +51,7 @@ namespace F3DZEX
 
             public int GetCommandCount() => _ids.Length;
 
-            public abstract bool Disassemble(Disassembler dis, int idx, out string output);
+            public abstract bool Disassemble(Disassembler dis, int idx, out string? output);
         }
 
         class LoadTLutMacro : MultiMacro
@@ -68,7 +68,7 @@ namespace F3DZEX
 
             }
 
-            public override bool Disassemble(Disassembler dis, int idx, out string output)
+            public override bool Disassemble(Disassembler dis, int idx, out string? output)
             {
                 output = null;
 
@@ -194,7 +194,7 @@ namespace F3DZEX
                     Txl2Words_4b(width));
             }
 
-            public override bool Disassemble(Disassembler dis, int idx, out string output)
+            public override bool Disassemble(Disassembler dis, int idx, out string? output)
             {
                 output = null;
 

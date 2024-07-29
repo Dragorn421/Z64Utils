@@ -22,7 +22,7 @@ namespace F3DZEX.Render
         int _texWidth;
         int _texHeight;
         RectangleF[] _charSpaces;
-        string _lastStr;
+        string? _lastStr;
         float[] _lastVertices;
 
         public Vector2 Position { get; set; }
