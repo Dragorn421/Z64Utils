@@ -19,7 +19,7 @@
             </ComboBox>
             <TextBox Text="{Binding InputAddressStr}" Watermark="0x0421_2048" />
         </StackPanel>
-        <TextBlock Text="{Binding OutputText}" FontFamily="Monospace" MinWidth="400" MinHeight="100"
+        <TextBlock Text="{Binding OutputText}" FontFamily="{StaticResource MonospacedFont}" MinWidth="400" MinHeight="100"
             Margin="10" />
     </StackPanel>
 </Window>

@@ -7,9 +7,9 @@
 >
     <ScrollViewer VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Auto">
         <DockPanel>
-            <TextBlock DockPanel.Dock="Top" Name="HeaderTextBlock" FontFamily="Monospace" />
+            <TextBlock DockPanel.Dock="Top" Name="HeaderTextBlock" FontFamily="{StaticResource MonospacedFont}" />
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <TextBlock Name="ContentTextBlock" FontFamily="Monospace" />
+                <TextBlock Name="ContentTextBlock" FontFamily="{StaticResource MonospacedFont}" />
             </ScrollViewer>
         </DockPanel>
     </ScrollViewer>

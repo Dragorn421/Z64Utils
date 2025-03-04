@@ -70,6 +70,7 @@ public partial class ErrorWindow : Window
             newInlines.Add(
                 new Run(monospaceMessage)
                 {
+                    // TODO use app's monospace font (`{StaticResource MonospacedFont}`)
                     FontFamily = "Monospace",
                 }
             );

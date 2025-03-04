@@ -16,5 +16,6 @@
                 <ResourceInclude Source="/Controls/HexTextBox/Themes/Fluent.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
+        <FontFamily x:Key="MonospacedFont">avares://Z64Utils_Avalonia/Assets/Fonts#Hack</FontFamily>
     </Application.Resources>
 </Application>

@@ -7,5 +7,5 @@
     x:Class="Z64Utils_Avalonia.TextOHEDView"
     x:DataType="vm:TextOHEDViewModel"
 >
-    <TextBox AcceptsReturn="True" IsReadOnly="True" FontFamily="Monospace" Text="{Binding Text}" />
+    <TextBox AcceptsReturn="True" IsReadOnly="True" FontFamily="{StaticResource MonospacedFont}" Text="{Binding Text}" />
 </UserControl>

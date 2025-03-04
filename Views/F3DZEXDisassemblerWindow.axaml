@@ -24,13 +24,13 @@
                     Foreground="Green">Hex</TextBlock>
                 <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !InputIsValid}"
                     Foreground="Red">Hex</TextBlock>
-                <TextBox AcceptsReturn="True" FontFamily="Monospace"
+                <TextBox AcceptsReturn="True" FontFamily="{StaticResource MonospacedFont}"
                     Text="{Binding InputHex}" />
             </DockPanel>
             <GridSplitter Grid.Row="1" ResizeDirection="Rows" />
             <DockPanel Grid.Row="2">
                 <TextBlock DockPanel.Dock="Top">Disassembly</TextBlock>
-                <TextBox AcceptsReturn="True" IsReadOnly="True" FontFamily="Monospace"
+                <TextBox AcceptsReturn="True" IsReadOnly="True" FontFamily="{StaticResource MonospacedFont}"
                     Text="{Binding OutputDisas}" />
             </DockPanel>
         </Grid>
