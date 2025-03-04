@@ -418,6 +418,7 @@ public partial class ObjectAnalyzerWindowViewModel : ObservableObject
         Debug.Assert(_file != null);
         skelvVM.SetSegment(_segment, F3DZEX.Memory.Segment.FromBytes("[this object]", _file.Data));
         skelvVM.SetSegment(8, EMPTY_DLIST_SEGMENT);
+        skelvVM.SetSegment(9, EMPTY_DLIST_SEGMENT);
         Debug.Assert(_object != null);
         Debug.Assert(ohe.ObjectHolder is Z64Object.SkeletonHolder);
         var skeletonHolder = (Z64Object.SkeletonHolder)ohe.ObjectHolder;

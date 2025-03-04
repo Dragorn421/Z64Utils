@@ -59,6 +59,11 @@ public abstract class OpenTKControlBase : OpenGlControlBase
         LoadOpenTKBindings(gl);
         CheckError(gl);
 
+        Logger.Debug("GL Version: " + GL.GetString(StringName.Version));
+        Logger.Debug("GL Renderer: " + GL.GetString(StringName.Renderer));
+        Logger.Debug("GL Vendor: " + GL.GetString(StringName.Vendor));
+        Logger.Debug("GL Shading Language Version: " + GL.GetString(StringName.ShadingLanguageVersion));
+
         try
         {
             OnOpenTKInit();
