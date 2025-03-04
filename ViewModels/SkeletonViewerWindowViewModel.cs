@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -57,14 +58,26 @@ public partial class SkeletonViewerWindowViewModel : ObservableObject
 
     public SkeletonViewerWindowViewModel()
     {
+        PropertyChanging += (sender, e) =>
+        {
+            switch (e.PropertyName)
+            {
+                case nameof(Renderer):
+                    if (Renderer != null)
+                        Renderer.PropertyChanged -= OnRendererPropertyChanged;
+                    DisplayElements.Clear();
+                    DecodeError = null;
+                    RenderError = null;
+                    break;
+            }
+        };
         PropertyChanged += (sender, e) =>
         {
             switch (e.PropertyName)
             {
                 case nameof(Renderer):
-                    DisplayElements.Clear();
-                    DecodeError = null;
-                    RenderError = null;
+                    if (Renderer != null)
+                        Renderer.PropertyChanged += OnRendererPropertyChanged;
                     break;
                 case nameof(CurFrame):
                     Debug.Assert(CurFrame >= 0 && CurFrame <= MaxFrame);
@@ -80,6 +93,24 @@ public partial class SkeletonViewerWindowViewModel : ObservableObject
         };
         _playAnimTimer.Tick += OnPlayAnimTimerTick;
         PlayAnimTickPeriodMs = 1000 / 20;
+    }
+
+    private void OnRendererPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        Debug.Assert(Renderer != null);
+        switch (e.PropertyName)
+        {
+            case nameof(Renderer.HasError):
+                if (Renderer.HasError)
+                {
+                    RenderError = $"RENDER ERROR AT 0x{Renderer.RenderErrorAddr:X8}! ({Renderer.ErrorMsg})";
+                }
+                else
+                {
+                    RenderError = null;
+                }
+                break;
+        }
     }
 
     public void SetSegment(int index, F3DZEX.Memory.Segment segment)
@@ -326,7 +357,7 @@ public partial class SkeletonViewerWindowViewModel : ObservableObject
         matrixStack.Pop();
 
         var mtxBufForFlexBytes = new byte[matrixBufferForFlex.Count * Mtx.SIZE];
-        using (BinaryStream bw = new(new MemoryStream(mtxBufForFlexBytes), ByteConverter.Big))
+        using (BinaryStream bw = new(new MemoryStream(mtxBufForFlexBytes), Syroot.BinaryData.ByteConverter.Big))
         {
             foreach (var mtx in matrixBufferForFlex)
             {
