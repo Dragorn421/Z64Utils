@@ -116,50 +116,26 @@ namespace Z64.Forms
             SetSkeleton(skel, anims);
         }
 
-        void RenderLimb(int limbIdx, bool overlay = false)
+        void RenderLimb(int limbIdx)
         {
             _renderer.RdpMtxStack.Push();
 
             _renderer.RdpMtxStack.Load(CalcMatrix(_renderer.RdpMtxStack.Top(), limbIdx));
 
-            if (overlay)
-            {
-                GL.Begin(PrimitiveType.Points);
-                GL.Vertex3(0, 0, 0);
-                GL.End();
+            var node = treeView_hierarchy.SelectedNode;
+            _renderer.SetHightlightEnabled(node?.Tag?.Equals(_limbs[limbIdx]) ?? false);
 
-                if (_limbs[limbIdx].Child != 0xFF)
-                {
-                    Vector3 childPos;
-
-                    if (_curAnim != null && _curJoints != null)
-                        childPos = GetLimbPos(_limbs[limbIdx].Child);
-                    else
-                        childPos = new Vector3(0, 0, 0);
-
-                    GL.Begin(PrimitiveType.Lines);
-                    GL.Vertex3(0, 0, 0);
-                    GL.Vertex3(childPos);
-                    GL.End();
-                }
-            }
-            else
-            {
-                var node = treeView_hierarchy.SelectedNode;
-                _renderer.SetHightlightEnabled(node?.Tag?.Equals(_limbs[limbIdx]) ?? false);
-
-                var dl = _limbDlists[limbIdx];
-                if (dl != null && _limbDlistRenderFlags[limbIdx])
-                    _renderer.RenderDList(dl);
-            }
+            var dl = _limbDlists[limbIdx];
+            if (dl != null && _limbDlistRenderFlags[limbIdx])
+                _renderer.RenderDList(dl);
 
             if (_limbs[limbIdx].Child != 0xFF)
-                RenderLimb(_limbs[limbIdx].Child, overlay);
+                RenderLimb(_limbs[limbIdx].Child);
 
             _renderer.RdpMtxStack.Pop();
 
             if (_limbs[limbIdx].Sibling != 0xFF)
-                RenderLimb(_limbs[limbIdx].Sibling, overlay);
+                RenderLimb(_limbs[limbIdx].Sibling);
         }
 
         void RenderCallback(Matrix4 proj, Matrix4 view)
@@ -172,13 +148,6 @@ namespace Z64.Forms
 
             _renderer.RenderStart(proj, view);
             RenderLimb(0);
-
-            /*
-            GL.PointSize(10.0f);
-            GL.LineWidth(2.0f);
-            GL.Color3(0xFF, 0, 0);
-            RenderLimb(0, true);
-            */
 
             if (_renderer.RenderFailed())
             {
