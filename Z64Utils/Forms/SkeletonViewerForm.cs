@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Windows.Forms;
 using OpenTK;
 using OpenTK.Graphics.OpenGL;
@@ -35,16 +36,15 @@ namespace Z64.Forms
         SettingsForm? _settingsForm;
         F3DZEX.Render.Renderer.Config _rendererCfg;
 
-        SkeletonHolder _skel;
+        Skelanime.Skeleton _skeleton;
+        bool _isFlexSkeleton;
+        int _flexSkelDListCount; // TODO remove
         List<AnimationHolder> _anims;
         List<PlayerAnimationHolder> _playerAnims;
-        List<SkeletonLimbHolder> _limbs;
         List<F3DZEX.Command.Dlist?> _limbDlists;
-        List<bool> _limbDlistRenderFlags;
+        bool[] _limbDlistRenderFlags;
 
-        AnimationHolder? _curAnim;
-        short[]? _frameData;
-        AnimationJointIndicesHolder.JointIndex[]? _curJoints;
+        Skelanime.Animation? _curAnimation;
 
         PlayerAnimationHolder? _curPlayerAnim;
         PlayerAnimationJointTableHolder.JointTableEntry[,]? _curPlayerJointTable;
@@ -116,28 +116,6 @@ namespace Z64.Forms
             SetSkeleton(skel, anims);
         }
 
-        void RenderLimb(int limbIdx)
-        {
-            _renderer.RdpMtxStack.Push();
-
-            _renderer.RdpMtxStack.Load(CalcMatrix(_renderer.RdpMtxStack.Top(), limbIdx));
-
-            var node = treeView_hierarchy.SelectedNode;
-            _renderer.SetHightlightEnabled(node?.Tag?.Equals(_limbs[limbIdx]) ?? false);
-
-            var dl = _limbDlists[limbIdx];
-            if (dl != null && _limbDlistRenderFlags[limbIdx])
-                _renderer.RenderDList(dl);
-
-            if (_limbs[limbIdx].Child != 0xFF)
-                RenderLimb(_limbs[limbIdx].Child);
-
-            _renderer.RdpMtxStack.Pop();
-
-            if (_limbs[limbIdx].Sibling != 0xFF)
-                RenderLimb(_limbs[limbIdx].Sibling);
-        }
-
         void RenderCallback(Matrix4 proj, Matrix4 view)
         {
             if (_dlistError != null)
@@ -147,7 +125,32 @@ namespace Z64.Forms
             }
 
             _renderer.RenderStart(proj, view);
-            RenderLimb(0);
+            Matrix4[] limbsPose;
+            if (_curAnimation == null)
+            {
+                limbsPose = new Matrix4[_skeleton.Limbs.Count];
+                for (int i = 0; i < limbsPose.Length; i++)
+                {
+                    limbsPose[i] = Matrix4.Identity;
+                }
+            }
+            else
+            {
+                limbsPose = Skelanime
+                    .SkeletonPose.Get(_skeleton, _curAnimation, trackBar_anim.Value)
+                    .LimbsPose;
+            }
+            _skeleton.Root.Visit(index =>
+            {
+                _renderer.RdpMtxStack.Load(limbsPose[index]);
+
+                var node = treeView_hierarchy.SelectedNode;
+                _renderer.SetHightlightEnabled(node?.Tag?.Equals(_skeleton.Limbs[index]) ?? false);
+
+                var dl = _limbDlists[index];
+                if (dl != null && _limbDlistRenderFlags[index])
+                    _renderer.RenderDList(dl);
+            });
 
             if (_renderer.RenderFailed())
             {
@@ -169,7 +172,7 @@ namespace Z64.Forms
             var tag = treeView_hierarchy.SelectedNode?.Tag ?? null;
             if (tag != null && tag is SkeletonLimbHolder)
             {
-                var dlist = _limbDlists[_limbs.IndexOf((SkeletonLimbHolder)tag)];
+                var dlist = _limbDlists[_skeleton.Limbs.IndexOf((SkeletonLimbHolder)tag)];
                 if (dlist != null)
                     _disasForm?.UpdateDlist(dlist);
                 else
@@ -186,7 +189,7 @@ namespace Z64.Forms
                 var tag = e.Node.Tag ?? null;
                 if (tag != null && tag is SkeletonLimbHolder)
                 {
-                    var index = _limbs.IndexOf((SkeletonLimbHolder)tag);
+                    var index = _skeleton.Limbs.IndexOf((SkeletonLimbHolder)tag);
                     _limbDlistRenderFlags[index] = !_limbDlistRenderFlags[index];
                     if (!_limbDlistRenderFlags[index])
                         e.Node.ForeColor = Color.Gray;
@@ -207,12 +210,14 @@ namespace Z64.Forms
             modelViewer.Render();
         }
 
-        [MemberNotNull(nameof(_skel), nameof(_anims), nameof(_playerAnims))]
-        [MemberNotNull(nameof(_limbs), nameof(_limbDlistRenderFlags))]
+        [MemberNotNull(nameof(_skeleton), nameof(_anims), nameof(_playerAnims))]
+        [MemberNotNull(nameof(_limbDlistRenderFlags))]
         [MemberNotNull(nameof(_limbDlists))]
         public void SetSkeleton(SkeletonHolder skel, List<AnimationHolder> anims)
         {
-            _skel = skel;
+            _skeleton = Skelanime.Skeleton.Get(_renderer.Memory, skel);
+            _isFlexSkeleton = skel is FlexSkeletonHolder;
+            _flexSkelDListCount = skel is FlexSkeletonHolder flexSkel ? flexSkel.DListCount : 0;
             _anims = anims;
             _playerAnims = new List<PlayerAnimationHolder>();
 
@@ -229,7 +234,7 @@ namespace Z64.Forms
             _dlistError = null;
             _limbDlists = new();
 
-            foreach (var limb in _limbs)
+            foreach (var limb in _skeleton.Limbs)
             {
                 if (limb.Type != EntryType.StandardLimb && limb.Type != EntryType.LODLimb)
                     throw new Exception($"Unimplemented limb type in skeleton viewer {limb.Type}");
@@ -251,29 +256,17 @@ namespace Z64.Forms
         }
 
         // Updates skeleton -> limbs / limbs dlists -> matrices
-        [MemberNotNull(nameof(_limbs), nameof(_limbDlistRenderFlags))]
+        [MemberNotNull(nameof(_limbDlistRenderFlags))]
         [MemberNotNull(nameof(_limbDlists))]
         void UpdateSkeleton()
         {
             treeView_hierarchy.Nodes.Clear();
-            var root = treeView_hierarchy.Nodes.Add("skeleton");
-            root.Tag = _skel;
+            treeView_hierarchy.Nodes.Add("skeleton");
 
-            byte[] limbsData = _renderer.Memory.ReadBytes(_skel.LimbsSeg, _skel.LimbCount * 4);
-
-            var limbs = new SkeletonLimbsHolder("limbs", limbsData);
-
-            _limbs = new List<SkeletonLimbHolder>();
-            _limbDlistRenderFlags = new List<bool>();
-            for (int i = 0; i < limbs.LimbSegments.Length; i++)
+            _limbDlistRenderFlags = new bool[_skeleton.Limbs.Count];
+            for (int i = 0; i < _limbDlistRenderFlags.Length; i++)
             {
-                byte[] limbData = _renderer.Memory.ReadBytes(
-                    limbs.LimbSegments[i],
-                    SkeletonLimbHolder.STANDARD_LIMB_SIZE
-                );
-                var limb = new SkeletonLimbHolder($"limb_{i}", limbData, EntryType.StandardLimb); // TODO support other limb types
-                _limbs.Add(limb);
-                _limbDlistRenderFlags.Add(true);
+                _limbDlistRenderFlags[i] = true;
             }
 
             UpdateLimbsDlists();
@@ -285,47 +278,25 @@ namespace Z64.Forms
         {
             TreeNode skelNode = treeView_hierarchy.Nodes[0];
 
-            if (_limbs.Count > 0)
-                AddLimbRoutine(skelNode, 0, 0, 0, 0);
+            if (_skeleton.Limbs.Count > 0)
+                AddLimbRoutine(skelNode, _skeleton.Root);
 
             UpdateMatrixBuf();
         }
 
-        void AddLimbRoutine(TreeNode parent, int i, int x, int y, int z)
+        void AddLimbRoutine(TreeNode parent, Skelanime.SkeletonTreeLimb treeLimb)
         {
-            var node = parent.Nodes.Add($"limb_{i}");
-            node.Tag = _limbs[i];
+            var node = parent.Nodes.Add($"limb_{treeLimb.Index}");
+            node.Tag = _skeleton.Limbs[treeLimb.Index];
 
-            if (_limbs[i].Sibling != 0xFF)
-                AddLimbRoutine(parent, _limbs[i].Sibling, x, y, z);
-            if (_limbs[i].Child != 0xFF)
-                AddLimbRoutine(
-                    node,
-                    _limbs[i].Child,
-                    x + _limbs[i].JointX,
-                    y + _limbs[i].JointY,
-                    z + _limbs[i].JointZ
-                );
+            if (treeLimb.Sibling != null)
+                AddLimbRoutine(parent, treeLimb.Sibling);
+            if (treeLimb.Child != null)
+                AddLimbRoutine(node, treeLimb.Child);
         }
 
-        float S16ToRad(short x) => x * (float)Math.PI / 0x7FFF;
-
-        float S16ToDeg(short x) => x * 360.0f / 0xFFFF;
-
-        float DegToRad(float x) => x * (float)Math.PI / 180.0f;
-
-        short GetFrameData(int frameDataIdx)
-        {
-            Debug.Assert(_frameData != null);
-            Debug.Assert(_curAnim != null);
-            return _frameData[
-                frameDataIdx < _curAnim.StaticIndexMax
-                    ? frameDataIdx
-                    : frameDataIdx + trackBar_anim.Value
-            ];
-        }
-
-        Vector3 GetLimbPos(int limbIdx)
+        /*
+        Vector3 _PlayerAnim_GetLimbPos(int limbIdx)
         {
             if (_curPlayerAnim != null)
             {
@@ -335,29 +306,18 @@ namespace Z64.Forms
                     _limbs[limbIdx].JointZ
                 );
             }
-
-            return (_curJoints == null) ? new Vector3(0, 0, 0)
-                : (limbIdx == 0)
-                    ? new Vector3(
-                        _curJoints[limbIdx].X,
-                        _curJoints[limbIdx].Y,
-                        _curJoints[limbIdx].Z
-                    )
-                : new Vector3(
-                    _limbs[limbIdx].JointX,
-                    _limbs[limbIdx].JointY,
-                    _limbs[limbIdx].JointZ
-                );
         }
+        */
 
         // Update anims -> matrices
         void UpdateAnim()
         {
-            Debug.Assert(_curAnim != null);
+            Debug.Assert(_curAnimation != null);
             trackBar_anim.Minimum = 0;
-            trackBar_anim.Maximum = _curAnim.FrameCount - 1;
+            trackBar_anim.Maximum = _curAnimation.FrameCount - 1;
             trackBar_anim.Value = 0;
 
+            /*
             var Saved = _renderer.Memory.Segments[_curSegment];
 
             if (_curAnim.extAnim)
@@ -368,24 +328,9 @@ namespace Z64.Forms
                     _animFile
                 );
             }
+            */
 
-            byte[] buff = _renderer.Memory.ReadBytes(
-                _curAnim.JointIndices,
-                (_limbs.Count + 1) * AnimationJointIndicesHolder.ENTRY_SIZE
-            );
-            _curJoints = new AnimationJointIndicesHolder("joints", buff).JointIndices;
-
-            int max = 0;
-            foreach (var joint in _curJoints)
-            {
-                max = Math.Max(max, joint.X);
-                max = Math.Max(max, joint.Y);
-                max = Math.Max(max, joint.Z);
-            }
-
-            int bytesToRead =
-                (max < _curAnim.StaticIndexMax ? max + 1 : _curAnim.FrameCount + max) * 2;
-
+            /*
             var curSegmentData = _renderer.Memory.Segments[_curSegment].Data;
             Debug.Assert(curSegmentData != null);
             if (bytesToRead + _curAnim.FrameData.SegmentOff > curSegmentData.Length)
@@ -396,14 +341,10 @@ namespace Z64.Forms
                 _animationError =
                     "Animation is glitchy; displaying folded pose. To view this animation, load it in-game.";
             }
-            else
-            {
-                buff = _renderer.Memory.ReadBytes(_curAnim.FrameData, bytesToRead);
-                _frameData = new AnimationFrameDataHolder("framedata", buff).FrameData;
-                _animationError = "";
-            }
+            */
 
-            _renderer.Memory.Segments[_curSegment] = Saved;
+            //_renderer.Memory.Segments[_curSegment] = Saved;
+
             UpdateMatrixBuf();
         }
 
@@ -435,37 +376,7 @@ namespace Z64.Forms
             UpdateMatrixBuf();
         }
 
-        Matrix4 CalcMatrix(Matrix4 src, int limbIdx)
-        {
-            if (_curPlayerAnim != null)
-            {
-                return CalcMatrixPlayer(src, limbIdx);
-            }
-
-            return CalcMatrixNormal(src, limbIdx);
-        }
-
-        Matrix4 CalcMatrixNormal(Matrix4 src, int limbIdx)
-        {
-            if (_curAnim == null || _curJoints == null)
-                return src;
-
-            Vector3 pos = GetLimbPos(limbIdx);
-
-            short rotX = GetFrameData(_curJoints[limbIdx + 1].X);
-            short rotY = GetFrameData(_curJoints[limbIdx + 1].Y);
-            short rotZ = GetFrameData(_curJoints[limbIdx + 1].Z);
-
-            src =
-                Matrix4.CreateRotationX(S16ToRad(rotX))
-                * Matrix4.CreateRotationY(S16ToRad(rotY))
-                * Matrix4.CreateRotationZ(S16ToRad(rotZ))
-                * Matrix4.CreateTranslation(pos)
-                * src;
-
-            return src;
-        }
-
+        /*
         Matrix4 CalcMatrixPlayer(Matrix4 src, int limbIdx)
         {
             if (_curPlayerJointTable == null)
@@ -486,45 +397,49 @@ namespace Z64.Forms
 
             return src;
         }
+        */
 
         // Flex Only
         void UpdateMatrixBuf()
         {
-            if (!(_skel is FlexSkeletonHolder flexSkel))
+            if (!_isFlexSkeleton)
                 return;
 
-            byte[] mtxBuff = new byte[flexSkel.DListCount * Mtx.SIZE];
+            // TODO copypasted from elsewhere
+            Matrix4[] limbsPose;
+            if (_curAnimation == null)
+            {
+                limbsPose = new Matrix4[_skeleton.Limbs.Count];
+                for (int i = 0; i < limbsPose.Length; i++)
+                {
+                    limbsPose[i] = Matrix4.Identity;
+                }
+            }
+            else
+            {
+                limbsPose = Skelanime
+                    .SkeletonPose.Get(_skeleton, _curAnimation, trackBar_anim.Value)
+                    .LimbsPose;
+            }
+            //
+
+            byte[] mtxBuff = new byte[_flexSkelDListCount * Mtx.SIZE];
 
             using (MemoryStream ms = new MemoryStream(mtxBuff))
             {
                 BinaryStream bw = new BinaryStream(ms, Syroot.BinaryData.ByteConverter.Big);
 
-                UpdateMatrixBuf(bw, 0, 0, Matrix4.Identity);
+                _skeleton.Root.Visit(index =>
+                {
+                    if (_limbDlists[index] != null)
+                        Mtx.FromMatrix4(limbsPose[index]).Write(bw);
+                });
             }
 
             _renderer.Memory.Segments[0xD] = F3DZEX.Memory.Segment.FromBytes(
                 "[RESERVED] Anim Matrices",
                 mtxBuff
             );
-        }
-
-        int UpdateMatrixBuf(BinaryStream bw, int limbIdx, int dlistIdx, Matrix4 src)
-        {
-            Matrix4 mtx = CalcMatrix(src, limbIdx);
-
-            if (_limbDlists[limbIdx] != null)
-            {
-                bw.Seek(dlistIdx++ * Mtx.SIZE, SeekOrigin.Begin);
-                Mtx.FromMatrix4(mtx).Write(bw);
-            }
-
-            if (_limbs[limbIdx].Child != 0xFF)
-                dlistIdx = UpdateMatrixBuf(bw, _limbs[limbIdx].Child, dlistIdx, mtx);
-
-            if (_limbs[limbIdx].Sibling != 0xFF)
-                dlistIdx = UpdateMatrixBuf(bw, _limbs[limbIdx].Sibling, dlistIdx, src);
-
-            return dlistIdx;
         }
 
         private void ToolStripRenderCfgBtn_Click(object sender, System.EventArgs e)
@@ -562,7 +477,7 @@ namespace Z64.Forms
             var tag = treeView_hierarchy.SelectedNode?.Tag ?? null;
             if (tag != null && tag is SkeletonLimbHolder)
             {
-                var dlist = _limbDlists[_limbs.IndexOf((SkeletonLimbHolder)tag)];
+                var dlist = _limbDlists[_skeleton.Limbs.IndexOf((SkeletonLimbHolder)tag)];
                 _disasForm.UpdateDlist(dlist);
             }
         }
@@ -581,7 +496,7 @@ namespace Z64.Forms
 
             _renderer.Memory.Segments[idx] = seg;
 
-            if (_limbs != null)
+            if (_skeleton != null)
                 UpdateLimbsDlists();
         }
 
@@ -596,7 +511,7 @@ namespace Z64.Forms
                 _segForm = new SegmentEditorForm(_game, _renderer);
                 _segForm.SegmentsChanged += (sender, e) =>
                 {
-                    if (e.SegmentID == 0xD && _skel is FlexSkeletonHolder)
+                    if (e.SegmentID == 0xD && _isFlexSkeleton)
                         MessageBox.Show(
                             "Error",
                             "Cannot set segment 13 (reserved for animation matrices)"
@@ -621,13 +536,18 @@ namespace Z64.Forms
                 trackBar_anim.Enabled =
                     listBox_anims.SelectedIndex >= 0;
 
-            _curAnim = null;
+            _curAnimation = null;
             _curPlayerAnim = null;
             if (listBox_anims.SelectedIndex >= 0)
             {
                 if (listBox_anims.SelectedIndex < _anims.Count)
                 {
-                    _curAnim = _anims[listBox_anims.SelectedIndex];
+                    var anim = _anims[listBox_anims.SelectedIndex];
+                    _curAnimation = Skelanime.Animation.Get(
+                        _renderer.Memory,
+                        anim,
+                        _skeleton.Limbs.Count
+                    );
                     UpdateAnim();
                 }
                 else
