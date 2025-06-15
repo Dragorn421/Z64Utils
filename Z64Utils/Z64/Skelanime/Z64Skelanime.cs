@@ -79,6 +79,30 @@ public class Skeleton
     }
 }
 
+public class FlexSkeleton : Skeleton
+{
+    public int DListCount;
+
+    public FlexSkeleton(
+        List<Z64Object.SkeletonLimbHolder> limbs,
+        SkeletonTreeLimb root,
+        int dListCount
+    )
+        : base(limbs, root)
+    {
+        DListCount = dListCount;
+    }
+
+    public static FlexSkeleton Get(
+        F3DZEX.Memory mem,
+        Z64Object.FlexSkeletonHolder flexSkeletonHolder
+    )
+    {
+        var skel = Skeleton.Get(mem, flexSkeletonHolder);
+        return new(skel.Limbs, skel.Root, flexSkeletonHolder.DListCount);
+    }
+}
+
 public class SkeletonPose
 {
     public Matrix4[] LimbsPose;
@@ -87,6 +111,8 @@ public class SkeletonPose
     {
         LimbsPose = limbsPose;
     }
+
+    private static float S16ToRad(short x) => x * (float)Math.PI / 0x7FFF;
 
     public static SkeletonPose Get(Skeleton skeleton, Animation anim, int frame)
     {
@@ -144,7 +170,60 @@ public class SkeletonPose
                 );
         }
 
-        float S16ToRad(short x) => x * (float)Math.PI / 0x7FFF;
+        RenderLimb(skeleton.Root);
+
+        return new(limbsPose);
+    }
+
+    public static SkeletonPose Get(Skeleton skeleton, PlayerAnimation playerAnim, int frame)
+    {
+        MatrixStack matrixStack = new();
+
+        var limbsPose = new Matrix4[skeleton.Limbs.Count];
+
+        void RenderLimb(SkeletonTreeLimb treeLimb)
+        {
+            matrixStack.Push();
+
+            matrixStack.Load(CalcMatrixPlayer(matrixStack.Top(), treeLimb.Index));
+
+            limbsPose[treeLimb.Index] = matrixStack.Top();
+
+            if (treeLimb.Child != null)
+                RenderLimb(treeLimb.Child);
+
+            matrixStack.Pop();
+
+            if (treeLimb.Sibling != null)
+                RenderLimb(treeLimb.Sibling);
+        }
+
+        Matrix4 CalcMatrixPlayer(Matrix4 src, int limbIdx)
+        {
+            Vector3 pos = GetLimbPos(limbIdx);
+
+            short rotX = playerAnim.JointTable[frame, limbIdx + 1].X;
+            short rotY = playerAnim.JointTable[frame, limbIdx + 1].Y;
+            short rotZ = playerAnim.JointTable[frame, limbIdx + 1].Z;
+
+            src =
+                Matrix4.CreateRotationX(S16ToRad(rotX))
+                * Matrix4.CreateRotationY(S16ToRad(rotY))
+                * Matrix4.CreateRotationZ(S16ToRad(rotZ))
+                * Matrix4.CreateTranslation(pos)
+                * src;
+
+            return src;
+        }
+
+        Vector3 GetLimbPos(int limbIdx)
+        {
+            return new Vector3(
+                skeleton.Limbs[limbIdx].JointX,
+                skeleton.Limbs[limbIdx].JointY,
+                skeleton.Limbs[limbIdx].JointZ
+            );
+        }
 
         RenderLimb(skeleton.Root);
 

@@ -56,3 +56,36 @@ public class Animation
         return new(animationHolder.FrameCount, animationHolder.StaticIndexMax, joints, frameData);
     }
 }
+
+public class PlayerAnimation
+{
+    public int FrameCount;
+    public Z64Object.PlayerAnimationJointTableHolder.JointTableEntry[,] JointTable;
+
+    public PlayerAnimation(
+        int frameCount,
+        Z64Object.PlayerAnimationJointTableHolder.JointTableEntry[,] jointTable
+    )
+    {
+        FrameCount = frameCount;
+        JointTable = jointTable;
+    }
+
+    public static PlayerAnimation Get(
+        F3DZEX.Memory mem,
+        Z64Object.PlayerAnimationHolder playerAnimationHolder
+    )
+    {
+        byte[] buff = mem.ReadBytes(
+            playerAnimationHolder.PlayerAnimationSegment,
+            ((Z64Object.PlayerAnimationHolder.PLAYER_LIMB_COUNT * 3) + 1)
+                * playerAnimationHolder.FrameCount
+                * 2
+        );
+        var playerJointTable = new Z64Object.PlayerAnimationJointTableHolder(
+            "joints",
+            buff
+        ).JointTable;
+        return new(playerAnimationHolder.FrameCount, playerJointTable);
+    }
+}
